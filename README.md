@@ -26,14 +26,14 @@ It is essential to retain the macOS EFI firmware partition, as the T1 processor 
 
 My EFI partition looks like this
 ```
-├── EFI
-│   └── APPLE
-│       ├── EMBEDDEDOS
-│       │   ├── FDRData
-│       │   ├── combined.memboot
-│       │   └── version.plist
-│       └── FIRMWARE
-│           └── MBP143.fd
+└── EFI
+    └── APPLE
+        ├── EMBEDDEDOS
+        │   ├── FDRData
+        │   ├── combined.memboot
+        │   └── version.plist
+        └── FIRMWARE
+            └── MBP143.fd
 ```
 
 1. Ensure that `dkms` is installed.
