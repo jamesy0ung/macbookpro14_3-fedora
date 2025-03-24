@@ -1,6 +1,6 @@
 # MacBookPro14,3 Fedora Setup
 
-This repository provides scripts and configuration files to aid in installing and configuring Fedora on a 2017 15-inch MacBook Pro (MacBookPro14,3). It leverages information from the Gentoo Wiki for similar MacBook Pro models and offers automated steps for configuring specific hardware.
+This repository provides scripts and configuration files to aid in installing and configuring Fedora on a 2017 15-inch MacBook Pro (MacBookPro14,3). It leverages information from the Gentoo Wiki, adapted for Fedora 41. [Apple MacBook Pro 15-inch (2016, Intel, Four Thunderbolt 3 Ports)](https://wiki.gentoo.org/wiki/Apple_MacBook_Pro_15-inch_(2016,_Intel,_Four_Thunderbolt_3_Ports))
 
 ## GPU
 
