@@ -22,7 +22,19 @@ Out of the box, Wi-Fi performance may be subpar. To improve performance, replace
 
 ## Touch Bar
 
-It is essential to retain the macOS EFI firmware partition, as the T1 processor loads the Touch Bar firmware from this partition.
+It is essential to retain the macOS EFI firmware partition, as the T1 processor loads the Touch Bar firmware from this partition. You can nuke everything else, including macOS, as Apple does not provide any more firmware updates for this Mac.
+
+My EFI partition looks like this
+```
+├── EFI
+│   └── APPLE
+│       ├── EMBEDDEDOS
+│       │   ├── FDRData
+│       │   ├── combined.memboot
+│       │   └── version.plist
+│       └── FIRMWARE
+│           └── MBP143.fd
+```
 
 1. Ensure that `dkms` is installed.
 2. Clone the repository containing the required driver:
