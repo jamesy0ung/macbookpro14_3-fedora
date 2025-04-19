@@ -1,61 +1,82 @@
-# MacBookPro14,3 Fedora Setup
+# Fedora 42 Setup: MacBookPro14,3 (2017 15")
 
-This repository provides scripts and configuration files to aid in installing and configuring Fedora on a 2017 15-inch MacBook Pro (MacBookPro14,3). It leverages information from the Gentoo Wiki, adapted for Fedora 41. [Apple MacBook Pro 15-inch (2016, Intel, Four Thunderbolt 3 Ports)](https://wiki.gentoo.org/wiki/Apple_MacBook_Pro_15-inch_(2016,_Intel,_Four_Thunderbolt_3_Ports))
+Scripts and config files for Fedora 42 on MacBookPro14,3. Based on [Gentoo Wiki MBP 15" (2016)](https://wiki.gentoo.org/wiki/Apple_MacBook_Pro_15-inch_(2016,_Intel,_Four_Thunderbolt_3_Ports)).
 
-## GPU
+**Primary Tool:** `aiosetup.sh` automates most configurations.
+Run `sudo ./aiosetup.sh --help` for options or `sudo ./aiosetup.sh` for interactive setup.
 
-### dGPU (Radeon Pro 560)
+## `aiosetup.sh` Capabilities
 
-The Radeon Pro 560 generally works well. However, I encountered an issue where the cursor would randomly disappear. This was resolved by adding `amdgpu.dpm=0 amdgpu.dc=1 amdgpu.debug=0x4` to the kernel command line. My 4K monitor works at 60Hz through a ThinkPad Thunderbolt 3 dock without any additional configuration.
+*   Installs Broadcom Wi-Fi firmware (`brcmfmac43602-pcie.txt`)
+*   Downloads/configures `apple_set_os.efi` for iGPU enablement
+*   Configures system for dGPU (AMD) or iGPU (Intel) usage
+*   Builds/installs `applespi` DKMS module for Touch Bar (`Heratiki/macbook12-spi-driver`)
+*   Builds/installs `snd_hda_macbookpro` DKMS module for Audio (`davidjo/snd_hda_macbookpro`)
+*   (Optional) Installs minimal GNOME desktop
 
-### iGPU
+**Recommended Usage:** Use script flags (e.g., `sudo ./aiosetup.sh --all-dgpu`) or interactive menu over manual steps.
 
-To enable the integrated GPU, you will need to install `apple_set_os.efi` using the provided `install-apple_set_os_efi.sh` script. Apple firmware typically disables the iGPU for operating systems other than macOS.
+## GPU Configuration
 
-### Switching
+### dGPU (Default - Radeon Pro 560)
 
-I have not yet experimented with using a dedicated GPU switching utility. Instead, I have created scripts (`switch-to-igpu.sh` and `switch-to-dgpu.sh`) that enable or disable blacklisting of the respective GPU drivers. This provides a manual method for switching between GPUs.
+*   **Issue:** Random cursor disappearance on desktop.
+*   **Fix:** Add `amdgpu.dpm=0 amdgpu.dc=1 amdgpu.debug=0x4` to kernel cmdline.
+*   **Script:** `sudo ./aiosetup.sh --dgpu` or `--all-dgpu` applies kernel params via GRUB config.
 
-## Wi-Fi
+### iGPU (Intel)
 
-Out of the box, Wi-Fi performance may be subpar. To improve performance, replace the `brcmfmac43602-pcie.txt` file located in `/usr/lib/firmware/brcm` with the provided file. You can optionally modify the MAC address in the new file to match your device's actual MAC address. After replacing the file and rebooting, Wi-Fi should be stable.
+*   **Requirement:** `apple_set_os.efi` needed in EFI boot chain to bypass firmware iGPU disable.
+*   **Configuration:** Blacklist `amdgpu` kernel module. Optional minimal Xorg config (`10-intel.conf`).
+*   **Script:** `sudo ./aiosetup.sh --igpu` or `--all-igpu` handles EFI helper download/config, GRUB update, `amdgpu` blacklisting, and Xorg config.
+
+### Switching GPUs
+
+Use the all-in-one script:
+*   Enable dGPU: `sudo ./aiosetup.sh --dgpu`
+*   Enable iGPU: `sudo ./aiosetup.sh --igpu`
+*   **Note:** Requires reboot. Handles GRUB, module blacklisting, EFI helper (for iGPU), and Xorg config.
+
+## Wi-Fi (Broadcom BCM43602)
+
+*   **Issue:** Poor performance, unable to connect to most networks.
+*   **Fix:** Replace `/usr/lib/firmware/brcm/brcmfmac43602-pcie.txt` with provided file. Update the file with your real mac address, optionally.
+*   **Script:** `sudo ./aiosetup.sh --wifi` (or any `--all-*`) replaces file and runs `dracut -f`.
+*   **Manual:**
+    ```bash
+    # Optional: Edit macaddr= line in repo's brcmfmac43602-pcie.txt first
+    sudo cp brcmfmac43602-pcie.txt /usr/lib/firmware/brcm/
+    sudo dracut -f
+    # Reboot required
+    ```
 
 ## Touch Bar
 
-It is essential to retain the macOS EFI firmware partition, as the T1 processor loads the Touch Bar firmware from this partition. You can nuke everything else, including macOS, as Apple does not provide any more firmware updates for this Mac.
+*   **Prerequisite:** Retain macOS EFI partition containing `EFI/APPLE/FIRMWARE/MBP143.fd`. T1 chip loads firmware from here.
+*   **Driver:** `applespi` kernel module via DKMS. Repo: `Heratiki/macbook12-spi-driver`.
+*   **Script:** `sudo ./aiosetup.sh --touchbar` (or any `--all-*`) handles:
+    *   Dependency installation (`dkms`, `kernel-devel`, `gcc`, `make`, `git`).
+    *   Cloning repo, DKMS build/install.
+    *   Loading modules via `/etc/modules-load.d/applespi.conf` (`applespi`, `apple-ib-tb`, `intel_lpss_pci`, `spi_pxa2xx_platform`).
+    *   `dracut -f`.
+*   **Note:** Reboot required. Provides standard Touch Bar functions (brightness, volume, Fn -> F-keys).
 
-My EFI partition looks like this
-```
-└── EFI
-    └── APPLE
-        ├── EMBEDDEDOS
-        │   ├── FDRData
-        │   ├── combined.memboot
-        │   └── version.plist
-        └── FIRMWARE
-            └── MBP143.fd
-```
+## Audio (Cirrus Logic CS42L83A)
 
-1. Ensure that `dkms` is installed.
-2. Clone the repository containing the required driver:
-   `git clone https://github.com/Heratiki/macbook12-spi-driver/tree/kernel-6.12.10-fixes /usr/src/applespi-0.1`
-3. Install the driver using DKMS:
-   `dkms install applespi/0.1`
-4. Create or modify `/etc/modules-load.d/applespi.conf` to include the following:
+*   **Issue:** No sound.
+*   **Driver:** `snd_hda_macbookpro` kernel module via DKMS. Repo: `davidjo/snd_hda_macbookpro`.
+*   **Script:** `sudo ./aiosetup.sh --audio` (or any `--all-*`) handles:
+    *   Dependency installation.
+    *   Cloning repo, running `install.cirrus.driver.sh` (uses DKMS).
+    *   `dracut -f`.
+*   **Note:** Reboot required. Enables speaker and headphone output. Microphone status untested/unreliable.
 
-   ```
-   applespi
-   apple-ib-tb
-   intel_lpss_pci
-   spi_pxa2xx_platform
-   ```
+## Other Hardware
 
-Reboot your system. The Touch Bar should now display the default controls. Pressing the "fn" key will reveal the function keys.
+*   **Camera:** Works after installing the Touch Bar drivers.
+*   **Suspend:** Untested/likely unreliable without tuning.
 
-## Sound, Camera, Suspend
+## Battery Life Estimation
 
-These features have not yet been configured or tested.
-
-## Battery Life
-
-With the dedicated GPU enabled (default configuration) and the system idle on the desktop at 50% brightness, I am getting approximately 3 hours of battery life. Battery life with the integrated GPU enabled has not yet been tested.
+*   **dGPU Enabled:** ~3 hours (idle, 50% brightness).
+*   **iGPU Enabled:** Untested, expected significant improvement.
