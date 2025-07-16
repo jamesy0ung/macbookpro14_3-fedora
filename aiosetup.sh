@@ -44,7 +44,6 @@ need_kernel_dev() {
   # make sure headers/devel match running kernel
   local ver="$(uname -r)"
   need_pkg "kernel-devel-${ver}"
-  need_pkg "kernel-headers-${ver}"
 }
 
 rebuild_initramfs() {
@@ -192,29 +191,6 @@ EOF
   rebuild_initramfs
   run dracut --force
 
-  say "Touch Bar ready."
-}-- Touch Bar (applespi) --${RESET}"
-  need_pkg git; need_pkg dkms; need_kernel_dev
-  if [[ ! -d $TOUCHBAR_SRC_DIR/.git ]]; then
-    run git clone --depth 1 -b "$TOUCHBAR_SRC_BRANCH" "$TOUCHBAR_SRC_REPO" "$TOUCHBAR_SRC_DIR"
-  else
-    run git -C "$TOUCHBAR_SRC_DIR" pull --ff-only
-  fi
-  local dkms_target="applespi/0.1"
-  if ! dkms status | grep -q "$dkms_target.*installed"; then
-    run dkms add "$TOUCHBAR_SRC_DIR"
-    run dkms build "$dkms_target"
-    run dkms install "$dkms_target"
-  else
-    say "applespi already installed (dkms)."
-  fi
-  cat >"$TOUCHBAR_MODULES_CONF" <<'EOF'
-applespi
-apple-ib-tb
-intel_lpss_pci
-spi_pxa2xx_platform
-EOF
-  rebuild_initramfs
   say "Touch Bar ready."
 }
 
